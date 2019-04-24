@@ -33,7 +33,7 @@ func GDALTranslate(
 	destName string,
 	srcDS Dataset,
 	options []string,
-) Dataset {
+) (Dataset, error) {
 
 	var err C.int
 
@@ -54,7 +54,11 @@ func GDALTranslate(
 		&err,
 	)
 
-	return Dataset{outputDs}
+	if err != 0 {
+		return Dataset{}, fmt.Errorf("GDAL Usage Error %d", err)
+	}
+
+	return Dataset{outputDs}, nil
 
 }
 
@@ -63,7 +67,7 @@ func GDALWarp(
 	dstDs Dataset,
 	srcDs []Dataset,
 	options []string,
-) Dataset {
+) (Dataset, error) {
 
 	var err C.int
 
@@ -92,6 +96,10 @@ func GDALWarp(
 		&err,
 	)
 
-	return Dataset{outputDs}
+	if err != 0 {
+		return Dataset{}, fmt.Errorf("GDAL Usage Error %d", err)
+	}
+
+	return Dataset{outputDs}, nil
 
 }
