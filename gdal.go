@@ -296,7 +296,6 @@ func (ce *ColorEntry) Set(c1, c2, c3, c4 uint) {
 	ce.cval.c4 = C.short(c4)
 }
 
-
 type VSILFILE struct {
 	cval *C.VSILFILE
 }
@@ -1820,7 +1819,6 @@ func VSIReadDirRecursive(filename string) []string {
 	return strings
 }
 
-
 // Open file.
 func VSIFOpenL(fileName string, fileAccess string) (VSILFILE, error) {
 	cFileName := C.CString(fileName)
@@ -1848,4 +1846,30 @@ func VSIFReadL(nSize, nCount int, file VSILFILE) []byte {
 	C.VSIFReadL(p, C.size_t(nSize), C.size_t(nCount), file.cval)
 
 	return data
+}
+
+// Fetch buffer underlying memory file.
+func VSIGetMemFileBuffer(filename string, unlinkAndSeize bool) ([]byte, error) {
+	pszFilename := C.CString(filename)
+	defer C.free(unsafe.Pointer(pszFilename))
+
+	var bUnlinkAndSeize C.int
+	if unlinkAndSeize {
+		bUnlinkAndSeize = C.TRUE
+	} else {
+		bUnlinkAndSeize = C.FALSE
+	}
+
+	var pnDataLength C.vsi_l_offset
+	pabyData := C.VSIGetMemFileBuffer(pszFilename, &pnDataLength, bUnlinkAndSeize)
+	if pabyData == nil {
+		return nil, fmt.Errorf("Error: VSIFILE '%s' open mem file buffer error", filename)
+	}
+
+	data := C.GoBytes(unsafe.Pointer(pabyData), C.int(pnDataLength))
+	if unlinkAndSeize {
+		C.VSIFree(unsafe.Pointer(pabyData))
+	}
+
+	return data, nil
 }
