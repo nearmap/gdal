@@ -3,11 +3,6 @@ package gdal
 /*
 #include "go_gdal.h"
 #include "gdal_version.h"
-
-#cgo linux  pkg-config: gdal
-#cgo darwin pkg-config: gdal
-#cgo windows LDFLAGS: -Lc:/gdal/release-1600-x64/lib -lgdal_i
-#cgo windows CFLAGS: -IC:/gdal/release-1600-x64/include
 */
 import "C"
 import (
@@ -296,6 +291,11 @@ func (ce *ColorEntry) Set(c1, c2, c3, c4 uint) {
 	ce.cval.c4 = C.short(c4)
 }
 
+func (ce *ColorEntry) Get() (c1, c2, c3, c4 uint8) {
+
+	return *(*uint8)(unsafe.Pointer(&ce.cval.c1)), *(*uint8)(unsafe.Pointer(&ce.cval.c2)), *(*uint8)(unsafe.Pointer(&ce.cval.c3)), *(*uint8)(unsafe.Pointer(&ce.cval.c4))
+}
+
 type VSILFILE struct {
 	cval *C.VSILFILE
 }
@@ -352,6 +352,25 @@ func goGDALProgressFuncProxyA(complete C.double, message *C.char, data unsafe.Po
 	return arg.progresssFunc(
 		float64(complete), C.GoString(message), arg.data,
 	)
+}
+
+// CPLSetConfigOption
+func CPLSetConfigOption(key, val string) {
+	cKey := C.CString(key)
+	defer C.free(unsafe.Pointer(cKey))
+	cVal := C.CString(val)
+	defer C.free(unsafe.Pointer(cVal))
+	C.CPLSetConfigOption(cKey, cVal)
+}
+
+// CPLGetConfigOption
+func CPLGetConfigOption(key, val string) string {
+	cKey := C.CString(key)
+	defer C.free(unsafe.Pointer(cKey))
+
+	cVal := C.CString(val)
+	defer C.free(unsafe.Pointer(cVal))
+	return C.GoString(C.CPLGetConfigOption(cKey, cVal))
 }
 
 /* ==================================================================== */
@@ -662,7 +681,7 @@ func (dataset *Dataset) Metadata(domain string) []string {
 	q := uintptr(unsafe.Pointer(p))
 	for {
 		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
+		if p == nil || *p == nil {
 			break
 		}
 		strings = append(strings, C.GoString(*p))
@@ -742,6 +761,21 @@ func (object *Driver) MetadataItem(name, domain string) string {
 	)
 }
 func (object *Dataset) MetadataItem(name, domain string) string {
+	c_name := C.CString(name)
+	defer C.free(unsafe.Pointer(c_name))
+
+	c_domain := C.CString(domain)
+	defer C.free(unsafe.Pointer(c_domain))
+
+	return C.GoString(
+		C.GDALGetMetadataItem(
+			C.GDALMajorObjectH(unsafe.Pointer(object.cval)),
+			c_name, c_domain,
+		),
+	)
+}
+
+func (object *RasterBand) MetadataItem(name, domain string) string {
 	c_name := C.CString(name)
 	defer C.free(unsafe.Pointer(c_name))
 
@@ -860,18 +894,7 @@ func (dataset Dataset) AutoCreateWarpedVRT(srcWKT, dstWKT string, resampleAlg Re
 // Unimplemented: GDALBeginAsyncReader
 // Unimplemented: GDALEndAsyncReader
 
-// Read / write a region of image data from multiple bands
-func (dataset Dataset) IO(
-	rwFlag RWFlag,
-	xOff, yOff, xSize, ySize int,
-	buffer interface{},
-	bufXSize, bufYSize int,
-	bandCount int,
-	bandMap []int,
-	pixelSpace, lineSpace, bandSpace int,
-) error {
-	var dataType DataType
-	var dataPtr unsafe.Pointer
+func determineBufferType(buffer interface{}) (dataType DataType, dataPtr unsafe.Pointer, err error) {
 	switch data := buffer.(type) {
 	case []int8:
 		dataType = Byte
@@ -898,7 +921,24 @@ func (dataset Dataset) IO(
 		dataType = Float64
 		dataPtr = unsafe.Pointer(&data[0])
 	default:
-		return fmt.Errorf("Error: buffer is not a valid data type (must be a valid numeric slice)")
+		err = fmt.Errorf("error: buffer is not a valid data type (must be a valid numeric slice)")
+	}
+	return
+}
+
+// Read / write a region of image data from multiple bands
+func (dataset Dataset) IO(
+	rwFlag RWFlag,
+	xOff, yOff, xSize, ySize int,
+	buffer interface{},
+	bufXSize, bufYSize int,
+	bandCount int,
+	bandMap []int,
+	pixelSpace, lineSpace, bandSpace int,
+) error {
+	dataType, dataPtr, err := determineBufferType(buffer)
+	if err != nil {
+		return err
 	}
 
 	return C.GDALDatasetRasterIO(
@@ -1133,35 +1173,9 @@ func (rasterBand RasterBand) IO(
 	bufXSize, bufYSize int,
 	pixelSpace, lineSpace int,
 ) error {
-	var dataType DataType
-	var dataPtr unsafe.Pointer
-	switch data := buffer.(type) {
-	case []int8:
-		dataType = Byte
-		dataPtr = unsafe.Pointer(&data[0])
-	case []uint8:
-		dataType = Byte
-		dataPtr = unsafe.Pointer(&data[0])
-	case []int16:
-		dataType = Int16
-		dataPtr = unsafe.Pointer(&data[0])
-	case []uint16:
-		dataType = UInt16
-		dataPtr = unsafe.Pointer(&data[0])
-	case []int32:
-		dataType = Int32
-		dataPtr = unsafe.Pointer(&data[0])
-	case []uint32:
-		dataType = UInt32
-		dataPtr = unsafe.Pointer(&data[0])
-	case []float32:
-		dataType = Float32
-		dataPtr = unsafe.Pointer(&data[0])
-	case []float64:
-		dataType = Float64
-		dataPtr = unsafe.Pointer(&data[0])
-	default:
-		return fmt.Errorf("Error: buffer is not a valid data type (must be a valid numeric slice)")
+	dataType, dataPtr, err := determineBufferType(buffer)
+	if err != nil {
+		return err
 	}
 
 	return C.GDALRasterIO(

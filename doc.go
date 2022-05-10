@@ -17,14 +17,14 @@ A simple program to create a georeferenced blank 256x256 GeoTIFF:
 	import (
 		"fmt"
 		"flag"
-		gdal "github.com/lukeroth/gdal_go"
+		gdal "github.com/lukeroth/gdal "
 	)
 
 	func main() {
 		flag.Parse()
 		filename := flag.Arg(0)
 		if filename == "" {
-			fmt.Printf("Usage: test_tiff [filename]\n")
+			fmt.Printf("Usage: tiff [filename]\n")
 			return
 		}
 		buffer := make([]uint8, 256 * 256)
