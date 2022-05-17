@@ -16,7 +16,7 @@ Installation
 Compatibility
 -------------
 
-This software has been tested most recently on Ubuntu 18.10, GDAL version 2.3.2.
+This software has been tested most recently on Debian 11 Bullseye, GDAL version 3.2.2.
 
 -------------
 Examples

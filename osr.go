@@ -3,16 +3,20 @@ package gdal
 /*
 #include "go_gdal.h"
 #include "gdal_version.h"
-
-#cgo linux  pkg-config: gdal
-#cgo darwin pkg-config: gdal
-#cgo windows LDFLAGS: -Lc:/gdal/release-1600-x64/lib -lgdal_i
-#cgo windows CFLAGS: -IC:/gdal/release-1600-x64/include
+#include "ogr_srs_api.h"
 */
 import "C"
 import (
 	"reflect"
 	"unsafe"
+)
+
+type AxisMappingStrategy uint32
+
+const (
+	OAMS_TraditionalGisOrder = AxisMappingStrategy(C.OAMS_TRADITIONAL_GIS_ORDER)
+	OAMS_AuthorityCompliant  = AxisMappingStrategy(C.OAMS_AUTHORITY_COMPLIANT)
+	OAMS_Custom              = AxisMappingStrategy(C.OAMS_CUSTOM)
 )
 
 /* -------------------------------------------------------------------- */
@@ -29,6 +33,10 @@ func CreateSpatialReference(wkt string) SpatialReference {
 	defer C.free(unsafe.Pointer(cString))
 	sr := C.OSRNewSpatialReference(cString)
 	return SpatialReference{sr}
+}
+
+func (sr SpatialReference) SetAxisMappingStrategy(strategy AxisMappingStrategy) {
+	C.OSRSetAxisMappingStrategy(sr.cval, C.OSRAxisMappingStrategy(strategy))
 }
 
 // Initialize SRS based on WKT string
@@ -103,21 +111,6 @@ func (sr SpatialReference) Release() {
 // Validate spatial reference tokens
 func (sr SpatialReference) Validate() error {
 	return C.OSRValidate(sr.cval).Err()
-}
-
-// Correct parameter ordering to match CT specification
-func (sr SpatialReference) FixupOrdering() error {
-	return C.OSRFixupOrdering(sr.cval).Err()
-}
-
-// Fix up spatial reference as needed
-func (sr SpatialReference) Fixup() error {
-	return C.OSRFixup(sr.cval).Err()
-}
-
-// Strip OGC CT parameters
-func (sr SpatialReference) StripCTParams() error {
-	return C.OSRStripCTParms(sr.cval).Err()
 }
 
 // Import PROJ.4 coordinate string
@@ -1191,73 +1184,4 @@ func (ct CoordinateTransform) Destroy() {
 func (ct CoordinateTransform) Transform(numPoints int, xPoints []float64, yPoints []float64, zPoints []float64) bool {
 	val := C.OCTTransform(ct.cval, C.int(numPoints), (*C.double)(unsafe.Pointer(&xPoints[0])), (*C.double)(unsafe.Pointer(&yPoints[0])), (*C.double)(unsafe.Pointer(&zPoints[0])))
 	return int(val) != 0
-}
-
-// Fetch list of possible projection methods
-func ProjectionMethods() []string {
-	p := C.OPTGetProjectionMethods()
-	var strings []string
-	q := uintptr(unsafe.Pointer(p))
-	for {
-		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
-			break
-		}
-		strings = append(strings, C.GoString(*p))
-		q += unsafe.Sizeof(q)
-	}
-
-	return strings
-}
-
-// Fetch the parameters for a given projection method
-func ParameterList(method string) (params []string, name string) {
-	cMethod := C.CString(method)
-	defer C.free(unsafe.Pointer(cMethod))
-
-	var cName *C.char
-
-	p := C.OPTGetParameterList(cMethod, &cName)
-
-	name = C.GoString(cName)
-
-	var strings []string
-	q := uintptr(unsafe.Pointer(p))
-	for {
-		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
-			break
-		}
-		strings = append(strings, C.GoString(*p))
-		q += unsafe.Sizeof(q)
-	}
-
-	return strings, name
-}
-
-// Fetch information about a single parameter of a projection method
-func ParameterInfo(
-	projectionMethod, parameterName string,
-) (
-	username, paramType string,
-	defaultValue float64,
-	ok bool,
-) {
-	cMethod := C.CString(projectionMethod)
-	defer C.free(unsafe.Pointer(cMethod))
-
-	cName := C.CString(parameterName)
-	defer C.free(unsafe.Pointer(cName))
-
-	var cUserName *C.char
-	var cParamType *C.char
-	var cDefaultValue C.double
-
-	success := C.OPTGetParameterInfo(
-		cMethod,
-		cName,
-		&cUserName,
-		&cParamType,
-		&cDefaultValue)
-	return C.GoString(cUserName), C.GoString(cParamType), float64(cDefaultValue), success != 0
 }
