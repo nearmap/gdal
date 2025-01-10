@@ -16,7 +16,7 @@ Installation
 Compatibility
 -------------
 
-This software has been tested most recently on Debian 11 Bullseye, GDAL version 3.2.2.
+The library will require GDAL 3.6 which is available on Debian bookworm.
 
 -------------
 Examples
@@ -28,3 +28,15 @@ Status (3/08/2019)
 
 The majority of GDAL functionality exposed by the C API is available, as well as much of the OGR API.
 Most functionality is not covered by tests or benchmarks.
+
+
+-------------
+Nearmap Update (08/04/2024)
+-------------
+
+We have merged changes from : github.com/lukeroth/gdal in https://github.com/nearmap/gdal/pull/4.
+These changes require GDAL 3.6+ now.
+While not documented cleary in the source repository, it is mentioned in a [comment](https://github.com/lukeroth/gdal/blob/d4ff2229365e0206000207bc101f72b0ab2b2310/algorithms.go#L364):
+> // SizeOfStructure: Added in GDAL 3.6 to detect potential ABI issues. Should be set to sizeof(GDALGridLinearOptions)
+
+Note: GDAL is available in debian bookworm , but not in bullseye and older versions.
