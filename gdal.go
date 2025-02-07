@@ -638,6 +638,25 @@ func Open(filename string, access Access) (Dataset, error) {
 }
 
 // Open an existing dataset
+func OpenWithError(filename string, access Access) (Dataset, error) {
+	cFilename := C.CString(filename)
+	defer C.free(unsafe.Pointer(cFilename))
+
+	dataset := C.GDALOpen(cFilename, C.GDALAccess(access))
+	if dataset == nil {
+		// Look at the last error message:
+		// for 404, it should return a "HTTP response code: 404" message and code 3 (CE_Failure)
+		if C.CPLGetLastErrorType() != C.CE_None {
+			return Dataset{nil}, fmt.Errorf("Error: %s. dataset '%s' open error", C.GoString(C.CPLGetLastErrorMsg()), filename)
+
+		}
+		// Otherwise, revert to the default message:
+		return Dataset{nil}, fmt.Errorf("Error: dataset '%s' open error", filename)
+	}
+	return Dataset{dataset}, nil
+}
+
+// Open an existing dataset
 func OpenEx(filename string, flags OpenFlag, allowedDrivers []string,
 	openOptions []string, siblingFiles []string) (Dataset, error) {
 	cFilename := C.CString(filename)
