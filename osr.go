@@ -50,6 +50,7 @@ func (sr SpatialReference) FromWKT(wkt string) error {
 func (sr SpatialReference) ToWKT() (string, error) {
 	var p *C.char
 	err := OGRErr(C.OSRExportToWkt(sr.cval, &p)).Err()
+	defer C.CPLFree(unsafe.Pointer(p))
 	wkt := C.GoString(p)
 	return wkt, err
 }
@@ -60,6 +61,7 @@ func (sr SpatialReference) ToPrettyWKT(simplify bool) (string, error) {
 	err := OGRErr(C.OSRExportToPrettyWkt(
 		sr.cval, &p, BoolToCInt(simplify),
 	)).Err()
+	defer C.CPLFree(unsafe.Pointer(p))
 	wkt := C.GoString(p)
 	return wkt, err
 }
@@ -124,6 +126,7 @@ func (sr SpatialReference) FromProj4(input string) error {
 func (sr SpatialReference) ToProj4() (string, error) {
 	var p *C.char
 	err := OGRErr(C.OSRExportToProj4(sr.cval, &p)).Err()
+	defer C.CPLFree(unsafe.Pointer(p))
 	proj4 := C.GoString(p)
 	return proj4, err
 }
@@ -196,8 +199,8 @@ func (sr SpatialReference) ToPCI() (proj, units string, params []float64, errVal
 	header := (*reflect.SliceHeader)(unsafe.Pointer(&params))
 	header.Cap = 17
 	header.Len = 17
-	defer C.free(unsafe.Pointer(p))
-	defer C.free(unsafe.Pointer(u))
+	defer C.CPLFree(unsafe.Pointer(p))
+	defer C.CPLFree(unsafe.Pointer(u))
 	return C.GoString(p), C.GoString(u), params, err
 }
 
@@ -222,7 +225,7 @@ func (sr SpatialReference) ToUSGS() (proj, zone int, params []float64, datum int
 func (sr SpatialReference) ToXML() (xml string, errVal error) {
 	var x *C.char
 	err := OGRErr(C.OSRExportToXML(sr.cval, &x, nil)).Err()
-	defer C.free(unsafe.Pointer(x))
+	defer C.CPLFree(unsafe.Pointer(x))
 	return C.GoString(x), err
 }
 
@@ -230,7 +233,7 @@ func (sr SpatialReference) ToXML() (xml string, errVal error) {
 func (sr SpatialReference) ToMICoordSys() (output string, errVal error) {
 	var x *C.char
 	err := OGRErr(C.OSRExportToMICoordSys(sr.cval, &x)).Err()
-	defer C.free(unsafe.Pointer(x))
+	defer C.CPLFree(unsafe.Pointer(x))
 	return C.GoString(x), err
 }
 
