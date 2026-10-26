@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTiffDriver(t *testing.T) {
@@ -90,4 +91,16 @@ func TestRegenerateOverviews(t *testing.T) {
 	if err := os.Remove("testdata/temp.png"); err != nil {
 		t.Errorf(err.Error())
 	}
+}
+
+func TestVSIReadDirRecursive(t *testing.T) {
+	// GDAL returns NULL for an empty directory: this used to dereference it.
+	assert.Nil(t, VSIReadDirRecursive("/vsimem/osr_test_empty/"))
+
+	driver, err := GetDriverByName("GTiff")
+	require.NoError(t, err)
+	ds := driver.Create("/vsimem/osr_test/a.tif", 1, 1, 1, Byte, nil)
+	ds.Close()
+	defer VSIGetMemFileBuffer("/vsimem/osr_test/a.tif", true)
+	assert.Equal(t, []string{"a.tif"}, VSIReadDirRecursive("/vsimem/osr_test/"))
 }

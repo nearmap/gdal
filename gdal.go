@@ -2013,12 +2013,16 @@ func FlushCacheBlock() bool {
 /*      GDAL VSI Virtual File System                                    */
 /* ==================================================================== */
 
-// List VSI files
+// List VSI files. Returns nil for an empty or missing directory.
 func VSIReadDirRecursive(filename string) []string {
 	name := C.CString(filename)
 	defer C.free(unsafe.Pointer(name))
 
 	p := C.VSIReadDirRecursive(name)
+	if p == nil {
+		return nil
+	}
+	defer C.CSLDestroy(p)
 	var strings []string
 	q := uintptr(unsafe.Pointer(p))
 	for {
