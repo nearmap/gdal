@@ -1,5 +1,7 @@
 module github.com/nearmap/gdal
 
-go 1.15
+go 1.26.0
 
-require github.com/stretchr/testify v1.7.2
+require github.com/stretchr/testify v1.12.1
+
+require go.yaml.in/yaml/v3 v3.0.5 // indirect

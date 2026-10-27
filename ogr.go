@@ -508,6 +508,7 @@ func CreateFromGML(gml string) Geometry {
 // Convert a geometry to GML format
 func (geom Geometry) ToGML() string {
 	val := C.OGR_G_ExportToGML(geom.cval)
+	defer C.CPLFree(unsafe.Pointer(val))
 	return C.GoString(val)
 }
 
@@ -522,6 +523,7 @@ func (geom Geometry) ToGML_Ex(options []string) string {
 	opts[length] = (*C.char)(unsafe.Pointer(nil))
 
 	val := C.OGR_G_ExportToGMLEx(geom.cval, (**C.char)(unsafe.Pointer(&opts[0])))
+	defer C.CPLFree(unsafe.Pointer(val))
 	return C.GoString(val)
 }
 
@@ -536,6 +538,7 @@ func (geom Geometry) ToKML() string {
 // Convert a geometry to JSON format
 func (geom Geometry) ToJSON() string {
 	val := C.OGR_G_ExportToJson(geom.cval)
+	defer C.CPLFree(unsafe.Pointer(val))
 	return C.GoString(val)
 }
 
@@ -550,6 +553,7 @@ func (geom Geometry) ToJSON_ex(options []string) string {
 	opts[length] = (*C.char)(unsafe.Pointer(nil))
 
 	val := C.OGR_G_ExportToJsonEx(geom.cval, (**C.char)(unsafe.Pointer(&opts[0])))
+	defer C.CPLFree(unsafe.Pointer(val))
 	return C.GoString(val)
 }
 

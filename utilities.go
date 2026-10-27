@@ -45,6 +45,7 @@ func Info(sourceDS Dataset, options []string) string {
 		sourceDS.cval,
 		infoOpts,
 	)
+	defer C.CPLFree(unsafe.Pointer(infoText))
 
 	return C.GoString(infoText)
 

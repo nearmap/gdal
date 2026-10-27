@@ -1,0 +1,26 @@
+# The tested and recommended environment: Alpine 3.24 with GDAL 3.13.3 and Go 1.26,
+# the same image geolibsf's CI uses. Run the tests, and build the examples, with
+#
+#   docker compose run --rm test
+#
+# Change the versions here and in README's Compatibility section together.
+services:
+  test:
+    image: golang:1.26-alpine3.24
+    working_dir: /src
+    volumes:
+      - .:/src
+      - gomod:/go/pkg/mod
+    command:
+      - sh
+      - -euc
+      - |
+        # gdal-driver-png: Alpine ships the PNG driver separately, and TestRegenerateOverviews needs it.
+        apk add --no-cache build-base gdal-dev~3.13.3 gdal-driver-png~3.13.3
+        echo "GDAL $$(gdal-config --version), $$(go version)"
+        go test -count=1 ./...
+        for d in examples/*/; do (cd "$$d" && go build -o /dev/null .); done
+        echo "examples build"
+
+volumes:
+  gomod:

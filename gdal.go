@@ -227,8 +227,9 @@ const (
 )
 
 // Get data type size in bits.
+// Size returns the size of the data type in bits.
 func (dataType DataType) Size() int {
-	return int(C.GDALGetDataTypeSize(C.GDALDataType(dataType)))
+	return int(C.GDALGetDataTypeSizeBits(C.GDALDataType(dataType)))
 }
 
 func (dataType DataType) IsComplex() int {
@@ -946,18 +947,11 @@ func (dataset Dataset) Driver() Driver {
 // Fetch files forming the dataset.
 func (dataset Dataset) FileList() []string {
 	p := C.GDALGetFileList(dataset.cval)
-	var strings []string
-	q := uintptr(unsafe.Pointer(p))
-	for {
-		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
-			break
-		}
-		strings = append(strings, C.GoString(*p))
-		q += unsafe.Sizeof(q)
+	if p == nil {
+		return nil
 	}
-
-	return strings
+	defer C.CSLDestroy(p)
+	return goStrings(p)
 }
 
 // Close the dataset
@@ -2012,23 +2006,27 @@ func FlushCacheBlock() bool {
 /*      GDAL VSI Virtual File System                                    */
 /* ==================================================================== */
 
-// List VSI files
+// List VSI files. Returns nil for an empty or missing directory.
 func VSIReadDirRecursive(filename string) []string {
 	name := C.CString(filename)
 	defer C.free(unsafe.Pointer(name))
 
 	p := C.VSIReadDirRecursive(name)
-	var strings []string
-	q := uintptr(unsafe.Pointer(p))
-	for {
-		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
-			break
-		}
-		strings = append(strings, C.GoString(*p))
-		q += unsafe.Sizeof(q)
+	if p == nil {
+		return nil
 	}
+	defer C.CSLDestroy(p)
+	return goStrings(p)
+}
 
+// goStrings copies a NULL-terminated C string list into Go strings. The caller
+// still owns the list and frees it, after this returns.
+func goStrings(p **C.char) []string {
+	entries := unsafe.Slice(p, C.CSLCount(p))
+	strings := make([]string, len(entries))
+	for i, e := range entries {
+		strings[i] = C.GoString(e)
+	}
 	return strings
 }
 
