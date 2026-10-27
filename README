@@ -18,6 +18,8 @@ Compatibility
 
 The library will require GDAL 3.6 which is available on Debian bookworm.
 It is built and tested with GDAL 3.13 (Alpine 3.24), and requires Go 1.26 or later.
+`docker compose run --rm test` runs the tests, and builds the examples, in that environment
+(`golang:1.26-alpine3.24` with `gdal-dev~3.13.3`, as in geolibsf's CI).
 
 -------------
 Examples
