@@ -947,18 +947,11 @@ func (dataset Dataset) Driver() Driver {
 // Fetch files forming the dataset.
 func (dataset Dataset) FileList() []string {
 	p := C.GDALGetFileList(dataset.cval)
-	var strings []string
-	q := uintptr(unsafe.Pointer(p))
-	for {
-		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
-			break
-		}
-		strings = append(strings, C.GoString(*p))
-		q += unsafe.Sizeof(q)
+	if p == nil {
+		return nil
 	}
-
-	return strings
+	defer C.CSLDestroy(p)
+	return goStrings(p)
 }
 
 // Close the dataset
@@ -2023,17 +2016,17 @@ func VSIReadDirRecursive(filename string) []string {
 		return nil
 	}
 	defer C.CSLDestroy(p)
-	var strings []string
-	q := uintptr(unsafe.Pointer(p))
-	for {
-		p = (**C.char)(unsafe.Pointer(q))
-		if *p == nil {
-			break
-		}
-		strings = append(strings, C.GoString(*p))
-		q += unsafe.Sizeof(q)
-	}
+	return goStrings(p)
+}
 
+// goStrings copies a NULL-terminated C string list into Go strings. The caller
+// still owns the list and frees it, after this returns.
+func goStrings(p **C.char) []string {
+	entries := unsafe.Slice(p, C.CSLCount(p))
+	strings := make([]string, len(entries))
+	for i, e := range entries {
+		strings[i] = C.GoString(e)
+	}
 	return strings
 }
 

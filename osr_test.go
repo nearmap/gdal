@@ -42,6 +42,47 @@ func TestSpatialReferenceExports(t *testing.T) {
 	assert.True(t, strings.HasPrefix(mi, "Earth Projection"), mi)
 }
 
+// On failure GDAL still hands back a string to free (empty or NULL): the
+// exports free it before returning the error.
+func TestSpatialReferenceExportErrors(t *testing.T) {
+	sr := CreateSpatialReference("")
+	defer sr.Destroy()
+	require.NoError(t, sr.FromEPSG(3857))
+	_, err := sr.ToXML()
+	assert.Error(t, err)
+
+	empty := CreateSpatialReference("")
+	defer empty.Destroy()
+	_, err = empty.ToProj4()
+	assert.Error(t, err)
+	_, err = empty.ToWKT()
+	assert.Error(t, err)
+}
+
+// The unit and prime meridian names belong to the spatial reference: the
+// getters used to free them, which crashed or corrupted the heap.
+func TestSpatialReferenceGetters(t *testing.T) {
+	sr := CreateSpatialReference("")
+	defer sr.Destroy()
+	require.NoError(t, sr.FromEPSG(3857))
+
+	name, factor := sr.AngularUnits()
+	assert.Equal(t, "degree", name)
+	assert.InDelta(t, 0.0174532925199433, factor, 1e-15)
+
+	name, factor = sr.LinearUnits()
+	assert.Equal(t, "metre", name)
+	assert.Equal(t, 1.0, factor)
+
+	name, factor = sr.TargetLinearUnits("PROJCS")
+	assert.Equal(t, "metre", name)
+	assert.Equal(t, 1.0, factor)
+
+	name, offset := sr.PrimeMeridian()
+	assert.Equal(t, "Greenwich", name)
+	assert.Equal(t, 0.0, offset)
+}
+
 func TestSpatialReferenceFromEPSGUnknown(t *testing.T) {
 	sr := CreateSpatialReference("")
 	defer sr.Destroy()
@@ -57,6 +98,10 @@ func TestGeometryExports(t *testing.T) {
 	assert.Equal(t, `{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }`, geom.ToJSON_ex(nil))
 	assert.Equal(t, `<gml:Point><gml:coordinates>1,2</gml:coordinates></gml:Point>`, geom.ToGML())
 	assert.Equal(t, `<gml:Point><gml:coordinates>1,2</gml:coordinates></gml:Point>`, geom.ToGML_Ex(nil))
+
+	// With options: the option strings are freed separately from the result.
+	assert.Equal(t, `<gml:Point><gml:pos>1 2</gml:pos></gml:Point>`, geom.ToGML_Ex([]string{"FORMAT=GML3"}))
+	assert.Equal(t, `{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }`, geom.ToJSON_ex([]string{"COORDINATE_PRECISION=1"}))
 }
 
 func TestDataTypeSize(t *testing.T) {

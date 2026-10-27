@@ -94,13 +94,40 @@ func TestRegenerateOverviews(t *testing.T) {
 }
 
 func TestVSIReadDirRecursive(t *testing.T) {
-	// GDAL returns NULL for an empty directory: this used to dereference it.
-	assert.Nil(t, VSIReadDirRecursive("/vsimem/osr_test_empty/"))
+	t.Run("empty directory", func(t *testing.T) {
+		// GDAL returns NULL for an empty directory: this used to dereference it.
+		assert.Nil(t, VSIReadDirRecursive("/vsimem/vsi_test_empty/"))
+	})
 
-	driver, err := GetDriverByName("GTiff")
-	require.NoError(t, err)
-	ds := driver.Create("/vsimem/osr_test/a.tif", 1, 1, 1, Byte, nil)
-	ds.Close()
-	defer VSIGetMemFileBuffer("/vsimem/osr_test/a.tif", true)
-	assert.Equal(t, []string{"a.tif"}, VSIReadDirRecursive("/vsimem/osr_test/"))
+	t.Run("nested directory", func(t *testing.T) {
+		driver, err := GetDriverByName("GTiff")
+		require.NoError(t, err)
+		for _, name := range []string{"/vsimem/vsi_test/a.tif", "/vsimem/vsi_test/sub/b.tif"} {
+			driver.Create(name, 1, 1, 1, Byte, nil).Close()
+			defer VSIGetMemFileBuffer(name, true)
+		}
+		// Every entry past the first is read after the walk moves on, and
+		// GDAL lists the subdirectory itself with a trailing separator.
+		assert.Equal(t, []string{"a.tif", "sub/", "sub/b.tif"}, VSIReadDirRecursive("/vsimem/vsi_test/"))
+	})
+}
+
+func TestFileList(t *testing.T) {
+	t.Run("file-backed dataset", func(t *testing.T) {
+		driver, err := GetDriverByName("GTiff")
+		require.NoError(t, err)
+		ds := driver.Create("/vsimem/filelist_test.tif", 1, 1, 1, Byte, nil)
+		defer VSIGetMemFileBuffer("/vsimem/filelist_test.tif", true)
+		defer ds.Close()
+		assert.Equal(t, []string{"/vsimem/filelist_test.tif"}, ds.FileList())
+	})
+
+	t.Run("in-memory dataset", func(t *testing.T) {
+		// GDAL returns NULL for a dataset with no files: this used to dereference it.
+		driver, err := GetDriverByName("MEM")
+		require.NoError(t, err)
+		ds := driver.Create("", 1, 1, 1, Byte, nil)
+		defer ds.Close()
+		assert.Nil(t, ds.FileList())
+	})
 }

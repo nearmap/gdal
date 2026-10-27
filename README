@@ -41,3 +41,28 @@ While not documented cleary in the source repository, it is mentioned in a [comm
 > // SizeOfStructure: Added in GDAL 3.6 to detect potential ABI issues. Should be set to sizeof(GDALGridLinearOptions)
 
 Note: GDAL is available in debian bookworm , but not in bullseye and older versions.
+
+
+-------------
+Nearmap Update (28/10/2026)
+-------------
+
+Changes in https://github.com/nearmap/gdal/pull/7 (APIPLAT-1133, APIPLAT-1134):
+
+* Builds and is tested with GDAL 3.13.3 and Go 1.26. `DataType.Size` uses `GDALGetDataTypeSizeBits`,
+  since `GDALGetDataTypeSize` is deprecated.
+* Strings GDAL allocates for the caller are now freed with `CPLFree` after they are copied:
+  the `SpatialReference.To*` exports, `Geometry.ToGML`/`ToGML_Ex`/`ToJSON`/`ToJSON_ex`, and `Info`.
+  These leaked on every call.
+* String lists GDAL allocates for the caller are freed with `CSLDestroy`: `VSIReadDirRecursive` and
+  `Dataset.FileList`. Both return nil when GDAL returns no list (an empty or missing directory, a dataset
+  with no files), where they used to dereference NULL and crash.
+* `AngularUnits`, `LinearUnits`, `TargetLinearUnits` and `PrimeMeridian` no longer free the name they
+  return. GDAL owns it, and freeing it aborted the process (lukeroth/gdal#83).
+
+Who frees what: `OSRExportTo*`, `OGR_G_ExportTo*` and `GDALInfo` results with `CPLFree`;
+`VSIReadDirRecursive` and `GDALGetFileList` results with `CSLDestroy`; names returned by `OSRGet*`
+are owned by the spatial reference and are not freed.
+
+Known remaining issues: `ToPCI` and `ToUSGS` panic on every call (lukeroth/gdal#118), and
+`Feature.FieldAsIntegerList` reads GDAL's 32-bit integers as 64-bit ones (lukeroth/gdal#117).

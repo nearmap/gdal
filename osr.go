@@ -277,8 +277,8 @@ func (sr SpatialReference) SetAngularUnits(units string, radians float64) error 
 // Fetch the angular units for the geographic coordinate system
 func (sr SpatialReference) AngularUnits() (string, float64) {
 	var x *C.char
+	// GDAL owns x: GoString copies it, and it must not be freed here.
 	factor := C.OSRGetAngularUnits(sr.cval, &x)
-	defer C.free(unsafe.Pointer(x))
 	return C.GoString(x), float64(factor)
 }
 
@@ -308,8 +308,8 @@ func (sr SpatialReference) SetLinearUnitsAndUpdateParameters(name string, toMete
 // Fetch linear projection units
 func (sr SpatialReference) LinearUnits() (string, float64) {
 	var x *C.char
+	// GDAL owns x: GoString copies it, and it must not be freed here.
 	factor := C.OSRGetLinearUnits(sr.cval, &x)
-	defer C.free(unsafe.Pointer(x))
 	return C.GoString(x), float64(factor)
 }
 
@@ -318,16 +318,16 @@ func (sr SpatialReference) TargetLinearUnits(target string) (string, float64) {
 	cTarget := C.CString(target)
 	defer C.free(unsafe.Pointer(cTarget))
 	var x *C.char
+	// GDAL owns x: GoString copies it, and it must not be freed here.
 	factor := C.OSRGetTargetLinearUnits(sr.cval, cTarget, &x)
-	defer C.free(unsafe.Pointer(x))
 	return C.GoString(x), float64(factor)
 }
 
 // Fetch prime meridian information
 func (sr SpatialReference) PrimeMeridian() (string, float64) {
 	var x *C.char
+	// GDAL owns x: GoString copies it, and it must not be freed here.
 	offset := C.OSRGetPrimeMeridian(sr.cval, &x)
-	defer C.free(unsafe.Pointer(x))
 	return C.GoString(x), float64(offset)
 }
 
