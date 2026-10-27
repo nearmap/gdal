@@ -1,7 +1,7 @@
-module github.com/lukeroth/gdal/examples/warp
+module github.com/nearmap/gdal/examples/warp
 
-go 1.13
+go 1.26.0
 
-replace github.com/lukeroth/gdal => ../..
+replace github.com/nearmap/gdal => ../..
 
-require github.com/lukeroth/gdal v0.0.0-00010101000000-000000000000
+require github.com/nearmap/gdal v0.0.0-00010101000000-000000000000

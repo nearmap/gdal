@@ -16,7 +16,7 @@ import (
 func TestTiffDriver(t *testing.T) {
 	_, err := GetDriverByName("GTiff")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestMissingMetadata(t *testing.T) {
 func TestRegenerateOverviews(t *testing.T) {
 	memDrv, err := GetDriverByName("MEM")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	// 4x4 pixel size
 	ds, err := Open("testdata/smallgeo.tif", ReadOnly)
@@ -56,7 +56,7 @@ func TestRegenerateOverviews(t *testing.T) {
 	}
 	err = redband.RegenerateOverviews(3, &bands[0], "average", DummyProgress, nil)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	// generate PNG
 	outDrv, err := GetDriverByName("PNG")
@@ -67,11 +67,11 @@ func TestRegenerateOverviews(t *testing.T) {
 
 	imgFile, err := os.Open("testdata/temp.png")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	imgData, err := png.Decode(imgFile)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 
 	// assert that png is of 1x1 pixel
@@ -89,7 +89,7 @@ func TestRegenerateOverviews(t *testing.T) {
 
 	// remove temp.png
 	if err := os.Remove("testdata/temp.png"); err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 }
 
